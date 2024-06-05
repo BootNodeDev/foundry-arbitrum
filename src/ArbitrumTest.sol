@@ -16,6 +16,7 @@ contract ArbitrumTest is TestBase {
         vm.etch(address(0x0000000000000000000000000000000000000064), address(arbsys).code);
 
         // use the mocked Arbitrum inbox where L1-to-L2 messages are executed immediately
-        inbox = new ArbitrumInboxMock();
+        uint256 MAX_DATA_SIZE = 117_964;
+        inbox = new ArbitrumInboxMock(MAX_DATA_SIZE);
     }
 }

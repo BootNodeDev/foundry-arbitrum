@@ -14,6 +14,9 @@ contract L2Contract {
     // Address of the L1 contract, where messages will be sent and received
     address public l1Target;
 
+    // Address of the L1 contract as received by the L2 contract
+    address public l1Sender;
+
     // Arbitrum precompile, used to send messages to L1
     ArbSys constant arbsys = ArbSys(address(0x0000000000000000000000000000000000000064));
 
@@ -30,6 +33,7 @@ contract L2Contract {
     function handleMessageFromL1(uint256 number) external {
         // Do something with the number
         numberFromL1 = number;
+        l1Sender = msg.sender;
     }
 
     /// @notice Sets the L1 contract address

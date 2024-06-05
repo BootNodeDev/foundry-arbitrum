@@ -2,17 +2,15 @@
 pragma solidity ^0.8.13;
 
 import {Inbox} from "./forks/Inbox.sol";
-import {IBridge} from "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
-import {Bridge} from "@arbitrum/nitro-contracts/src/bridge/Bridge.sol";
-import {ISequencerInbox} from "@arbitrum/nitro-contracts/src/bridge/ISequencerInbox.sol";
-import {SequencerInbox} from "@arbitrum/nitro-contracts/src/bridge/SequencerInbox.sol";
-import {MAX_DATA_SIZE} from "@arbitrum/nitro-contracts/src/libraries/Constants.sol";
 import {
-    DataTooLarge,
     RetryableData,
     GasLimitTooLarge,
     InsufficientSubmissionCost
 } from "@arbitrum/nitro-contracts/src/libraries/Error.sol";
+import {AddressAliasHelper} from "@arbitrum/nitro-contracts/src/libraries/AddressAliasHelper.sol";
+
+// So that we can prank the call to the L2 target
+import {CommonBase} from "forge-std/Base.sol";
 
 /// @title ArbitrumInboxMock
 /// @notice Replaces the canonical Arbitrum Inbox with a mock that *immediately* executes the message
@@ -21,12 +19,15 @@ import {
 ///         not replace extensive testing.
 /// @notice Additional script-based testing (against local nitro nodes or testnet) is recommended
 /// @author saucepoint
-contract ArbitrumInboxMock is Inbox {
+contract ArbitrumInboxMock is Inbox, CommonBase {
     uint256 public msgNum;
+
+    constructor(uint256 _maxDataSize) Inbox(_maxDataSize) {}
 
     /// @dev Override ticket creation such that messages are immediately executed
     ///      instead of being queued into the delayed inbox
-    function unsafeCreateRetryableTicket(
+
+    function _unsafeCreateRetryableTicket(
         address to,
         uint256 l2CallValue,
         uint256 maxSubmissionCost,
@@ -34,16 +35,17 @@ contract ArbitrumInboxMock is Inbox {
         address callValueRefundAddress,
         uint256 gasLimit,
         uint256 maxFeePerGas,
+        uint256 amount,
         bytes calldata data
-    ) public payable override whenNotPaused onlyAllowed returns (uint256 _msgNum) {
+    ) internal override returns (uint256 _msgNum) {
         // gas price and limit of 1 should never be a valid input, so instead they are used as
         // magic values to trigger a revert in eth calls that surface data without requiring a tx trace
-        if (gasLimit == 1 || maxFeePerGas == 1) {
+        if (gasLimit == 1 || maxFeePerGas == 1)
             revert RetryableData(
                 msg.sender,
                 to,
                 l2CallValue,
-                msg.value,
+                amount,
                 maxSubmissionCost,
                 excessFeeRefundAddress,
                 callValueRefundAddress,
@@ -51,7 +53,6 @@ contract ArbitrumInboxMock is Inbox {
                 maxFeePerGas,
                 data
             );
-        }
 
         // arbos will discard retryable with gas limit too large
         if (gasLimit > type(uint64).max) {
@@ -59,14 +60,15 @@ contract ArbitrumInboxMock is Inbox {
         }
 
         uint256 submissionFee = calculateRetryableSubmissionFee(data.length, block.basefee);
-        if (maxSubmissionCost < submissionFee) {
+        if (maxSubmissionCost < submissionFee)
             revert InsufficientSubmissionCost(submissionFee, maxSubmissionCost);
-        }
 
         // ----------------- BEGIN MODIFICATION -----------------
         // Instead of queueing the message into the delayedInbox or the sequencer inbox
         // we immediately execute the message against the target contract
 
+        address aliased = AddressAliasHelper.applyL1ToL2Alias(msg.sender);
+        vm.prank(aliased);
         (bool success,) = to.call{value: l2CallValue}(data);
         require(success, "ArbitrumInboxMock: call failed");
 

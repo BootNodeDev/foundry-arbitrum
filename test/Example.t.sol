@@ -7,6 +7,8 @@ import {ArbitrumTest} from "../src/ArbitrumTest.sol";
 import {L1Contract} from "../src/examples/L1Contract.sol";
 import {L2Contract} from "../src/examples/L2Contract.sol";
 
+import {AddressAliasHelper} from "@arbitrum/nitro-contracts/src/libraries/AddressAliasHelper.sol";
+
 contract ExampleTest is Test, ArbitrumTest {
     L1Contract l1Contract;
     L2Contract l2Contract;
@@ -33,6 +35,13 @@ contract ExampleTest is Test, ArbitrumTest {
     function testL2ToL1Message(uint256 num) public {
         l2Contract.createL1Message(num);
         assertEq(l1Contract.numberFromL2(), num);
+    }
+
+    function testL1ToL2MessageSender(uint256 num) public {
+        l1Contract.createL2Message{value: 1 ether}(num);
+
+        address aliased = AddressAliasHelper.applyL1ToL2Alias(address(l1Contract));
+        assertEq(l2Contract.l1Sender(), aliased);
     }
 
     // Be doubly-sure that the mocked ArbSys precompile is available
