@@ -14,6 +14,9 @@ contract L1Contract {
     // Address of the L2 contract
     address public immutable l2Target;
 
+    // Address of the L2 sender
+    address public l2Sender;
+
     // Arbitrum Inbox (message handler)
     IInbox public inbox;
 
@@ -45,5 +48,6 @@ contract L1Contract {
     function handleMessageFromL2(uint256 number) external {
         // Do something with the number
         numberFromL2 = number;
+        l2Sender = msg.sender;
     }
 }
