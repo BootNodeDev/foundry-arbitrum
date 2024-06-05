@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "@arbitrum/nitro-contracts": "^1.0.1"
+    "@arbitrum/nitro-contracts": "1.1.0 - 1.2.1"
   }
 }
