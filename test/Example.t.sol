@@ -13,7 +13,7 @@ contract ExampleTest is Test, ArbitrumTest {
     L1Contract l1Contract;
     L2Contract l2Contract;
 
-    function setUp() public {
+    function setUp() public virtual {
         // Our L2 contract that will communicate with the L1 contract
         // via ArbSys (mocked in ArbitrumTest)
         l2Contract = new L2Contract();
