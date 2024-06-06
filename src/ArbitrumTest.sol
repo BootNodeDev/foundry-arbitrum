@@ -3,18 +3,17 @@ pragma solidity ^0.8.13;
 
 import {TestBase} from "forge-std/Base.sol";
 
+import {Bridge} from "@arbitrum/nitro-contracts/src/bridge/Bridge.sol";
+import {IOwnable} from "@arbitrum/nitro-contracts/src/bridge/IOwnable.sol";
+
 import {ArbSysMock} from "../src/ArbSysMock.sol";
 import {ArbitrumInboxMock} from "../src/ArbitrumInboxMock.sol";
-
-import {Bridge} from "@arbitrum/nitro-contracts/src/bridge/Bridge.sol";
+import {MAINNET_INBOX, MAINNET_BRIDGE, MAINNET_OUTBOX, ARBSYS_PRECOMPILE, MAX_DATA_SIZE} from "../src/constants.sol";
 
 contract ArbitrumTest is TestBase {
     ArbSysMock arbsys;
     ArbitrumInboxMock inbox;
     Bridge bridge;
-
-    address public constant ARBSYS_PRECOMPILE = 0x0000000000000000000000000000000000000064;
-    address public constant MAINNET_INBOX = 0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f;
 
     constructor() {
         setUpArbSysMock();
@@ -35,7 +34,6 @@ contract ArbitrumTest is TestBase {
 
     function setUpInboxMock() internal {
         // use the mocked Arbitrum inbox where L1-to-L2 messages are executed immediately
-        uint256 MAX_DATA_SIZE = 117_964;
         ArbitrumInboxMock _inbox = new ArbitrumInboxMock(MAX_DATA_SIZE);
         vm.etch(MAINNET_INBOX, address(_inbox).code);
 
@@ -46,8 +44,14 @@ contract ArbitrumTest is TestBase {
 
     function setUpBridge() internal {
         Bridge _bridge = new Bridge();
-        vm.etch(arbsys.MAINNET_BRIDGE(), address(_bridge).code);
+        vm.etch(MAINNET_BRIDGE, address(_bridge).code);
 
-        bridge = Bridge(arbsys.MAINNET_BRIDGE());
+        bridge = Bridge(MAINNET_BRIDGE);
+        // Hacky, but properly initializing the bridge is a hassle and we just
+        // want to fool the bridge into thinking we can make this call.
+        // See AbsBridge.onlyRollupOrOwner from
+        // @arbitrum/nitro-contracts/src/bridge/AbsBridge.sol
+        vm.mockCall(address(0), abi.encodeWithSelector(IOwnable.owner.selector), abi.encode(address(this)));
+        bridge.setOutbox(MAINNET_OUTBOX, true);
     }
 }

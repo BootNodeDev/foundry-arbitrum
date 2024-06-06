@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {L2Contract} from "./L2Contract.sol";
 import {IInbox} from "@arbitrum/nitro-contracts/src/bridge/IInbox.sol";
+import {IOutbox} from "@arbitrum/nitro-contracts/src/bridge/IOutbox.sol";
 
 /// @title L1Contract
 /// @notice An example L1 contract that interacts with an L2 contract (sends & receives messages)
@@ -14,8 +15,11 @@ contract L1Contract {
     // Address of the L2 contract
     address public immutable l2Target;
 
-    // Address of the L2 sender
+    // Address of the L2 sender - msg.sender for handler function
     address public l2Sender;
+
+    // Address returned by Outbox.l2ToL1Sender() during handler function call
+    address public l2ToL1Sender;
 
     // Arbitrum Inbox (message handler)
     IInbox public inbox;
@@ -49,5 +53,7 @@ contract L1Contract {
         // Do something with the number
         numberFromL2 = number;
         l2Sender = msg.sender;
+        IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
+        l2ToL1Sender = outbox.l2ToL1Sender();
     }
 }

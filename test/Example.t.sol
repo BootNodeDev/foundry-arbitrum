@@ -50,6 +50,12 @@ contract ExampleTest is Test, ArbitrumTest {
         assertEq(l1Contract.l2Sender(), address(bridge));
     }
 
+    function testOutboxL2ToL1Sender(uint256 num) public {
+        l2Contract.createL1Message(num);
+
+        assertEq(l1Contract.l2ToL1Sender(), address(l2Contract));
+    }
+
     // Be doubly-sure that the mocked ArbSys precompile is available
     function testArbSys() public {
         assertEq(address(0x64).code.length > 0, true);
